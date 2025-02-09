@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Socket.io Test</title>
+  <script src="https://cdn.socket.io/4.0.0/socket.io.min.js"></script>
+</head>
+<body>
+  <h1>Socket.io Test</h1>
+  <button id="addTodo">Add Todo</button>
+  <script>
+    const socket = io('http://localhost:3001');
+    socket.on('connect', () => {
+      console.log('Connected to server');
+    });
+    socket.on('updateTodos', (todo) => {
+      console.log('New todo:', todo);
+    });
+    socket.on('removeTodo', (id) => {
+      console.log('Todo removed:', id);
+    });
+    socket.on('disconnect', () => {
+      console.log('Disconnected from server');
+    });
+
+    document.getElementById('addTodo').addEventListener('click', () => {
+      const newTodo = { id: Date.now(), text: 'Test Todo' };
+      socket.emit('newTodo', newTodo);
+    });
+  </script>
+</body>
+</html>

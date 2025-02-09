@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 
-dotenv.config();
+dotenv.config(); // Stellen Sie sicher, dass dies am Anfang aufgerufen wird
 const app = express();
 const server = createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
@@ -14,6 +14,9 @@ app.use(express.json());
 
 const todoRoutes = require("./routes/todoRoutes");
 app.use("/todos", todoRoutes);
+
+const authRoutes = require("./routes/authRoutes");
+app.use("/auth", authRoutes);
 
 app.get("/", (req, res) => {
   res.send("Backend is running! 🚀");
@@ -35,10 +38,5 @@ io.on("connection", (socket) => {
   });
 });
 
-const authRoutes = require("./routes/authRoutes");
-app.use("/auth", authRoutes);
-
-
-server.listen(process.env.PORT, () => console.log(`🚀 Server running on http://localhost:3001`));
-
-//server.listen(process.env.PORT, () => console.log(`🚀 Server running on http://localhost:${process.env.PORT}`));
+const port = process.env.PORT || 3001;
+server.listen(port, () => console.log(`🚀 Server running on http://localhost:${port}`));
