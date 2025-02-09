@@ -1,44 +1,42 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const bcrypt = require("bcrypt");
-const jwt = require("jsonwebtoken");
-const db = require("../config/db");
-require("dotenv").config();
+const authMiddleware = require('../middleware/authMiddleware');
+const db = require('../config/db');
 
-const SECRET_KEY = process.env.SECRET_KEY || "supersecret";
+// Beispiel für eine geschützte Route
+router.get('/protected', authMiddleware, (req, res) => {
+  res.json({ msg: 'This is a protected route', user: req.user });
+});
 
-// ✅ Registrierung mit Überprüfung
-router.post("/register", async (req, res) => {
-  const { username, email, password } = req.body;
-
-  if (!username || !email || !password) {
-    return res.status(400).json({ error: "All fields are required" });
-  }
-
-  // Überprüfen, ob Benutzername oder E-Mail existieren
-  db.get("SELECT * FROM users WHERE username = ? OR email = ?", [username, email], async (err, user) => {
-    if (user) {
-      return res.status(400).json({ error: "Username or email already exists" });
+// Todos abrufen
+router.get('/', authMiddleware, (req, res) => {
+  db.all('SELECT * FROM todos WHERE user_id = (SELECT id FROM users WHERE email = ?)', [req.user.email], (err, rows) => {
+    if (err) {
+      return res.status(500).json({ msg: 'Database error' });
     }
-
-    const hashedPassword = await bcrypt.hash(password, 10);
-    db.run("INSERT INTO users (username, email, password) VALUES (?, ?, ?)", [username, email, hashedPassword], function (err) {
-      if (err) return res.status(500).json({ error: "Database error" });
-      res.json({ message: "Registration successful" });
-    });
+    res.json(rows);
   });
 });
 
-// ✅ Login bleibt gleich
-router.post("/login", (req, res) => {
-  const { email, password } = req.body;
-
-  db.get("SELECT * FROM users WHERE email = ?", [email], async (err, user) => {
-    if (!user || !(await bcrypt.compare(password, user.password))) {
-      return res.status(401).json({ error: "Invalid credentials" });
+// Todo hinzufügen
+router.post('/', authMiddleware, (req, res) => {
+  const { text } = req.body;
+  db.run('INSERT INTO todos (user_id, text) VALUES ((SELECT id FROM users WHERE email = ?), ?)', [req.user.email, text], function(err) {
+    if (err) {
+      return res.status(500).json({ msg: 'Database error' });
     }
-    const token = jwt.sign({ id: user.id, username: user.username }, SECRET_KEY, { expiresIn: "1h" });
-    res.json({ token });
+    res.json({ id: this.lastID, text });
+  });
+});
+
+// Todo löschen
+router.delete('/:id', authMiddleware, (req, res) => {
+  const { id } = req.params;
+  db.run('DELETE FROM todos WHERE id = ? AND user_id = (SELECT id FROM users WHERE email = ?)', [id, req.user.email], function(err) {
+    if (err) {
+      return res.status(500).json({ msg: 'Database error' });
+    }
+    res.json({ msg: 'Todo deleted' });
   });
 });
 
