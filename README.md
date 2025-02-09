@@ -1,6 +1,6 @@
 # Tudu
 
-TUDU-app/
+TUDU-app/__
 │── backend/  
 │   ├── models/       # Database models  
 │   ├── routes/       # API endpoints  
