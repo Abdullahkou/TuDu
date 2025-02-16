@@ -4,7 +4,7 @@ const dotenv = require("dotenv");
 const { createServer } = require("http");
 const { Server } = require("socket.io");
 
-dotenv.config(); // Stellen Sie sicher, dass dies am Anfang aufgerufen wird
+dotenv.config();
 const app = express();
 const server = createServer(app);
 const io = new Server(server, { cors: { origin: "*" } });
