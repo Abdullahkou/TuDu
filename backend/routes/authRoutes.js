@@ -7,9 +7,7 @@ const db = require('../config/db');
 
 const JWT_SECRET = 'my_super_secret_key_12345';
 
-// Registrierung
 router.post('/register', [
-  check('email', 'Email is required').isEmail(),
   check('username', 'Username is required').not().isEmpty(),
   check('password', 'Password must be at least 6 characters long').isLength({ min: 6 })
 ], async (req, res) => {
@@ -18,10 +16,9 @@ router.post('/register', [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, username, password } = req.body;
+  const { username, password } = req.body;
 
-  // Überprüfen, ob der Benutzer bereits existiert
-  db.get('SELECT * FROM users WHERE email = ? OR username = ?', [email, username], async (err, row) => {
+  db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
     if (err) {
       return res.status(500).json({ msg: 'Database error' });
     }
@@ -29,27 +26,23 @@ router.post('/register', [
       return res.status(400).json({ msg: 'User already exists' });
     }
 
-    // Passwort hashen
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // Benutzer erstellen
-    db.run('INSERT INTO users (email, username, password) VALUES (?, ?, ?)', [email, username, hashedPassword], function(err) {
+    db.run('INSERT INTO users (username, password) VALUES (?, ?)', [username, hashedPassword], function (err) {
       if (err) {
         return res.status(500).json({ msg: 'Database error' });
       }
 
-      // JWT erstellen
-      const token = jwt.sign({ email, username }, JWT_SECRET, { expiresIn: '1h' });
+      const token = jwt.sign({ id: this.lastID, username }, JWT_SECRET, { expiresIn: '1h' });
 
-      res.json({ token });
+      res.json({ token, user: { id: this.lastID, username } });
     });
   });
 });
 
-// Anmeldung
 router.post('/login', [
-  check('email', 'Email is required').isEmail(),
+  check('username', 'Username is required').not().isEmpty(),
   check('password', 'Password is required').not().isEmpty()
 ], async (req, res) => {
   const errors = validationResult(req);
@@ -57,10 +50,9 @@ router.post('/login', [
     return res.status(400).json({ errors: errors.array() });
   }
 
-  const { email, password } = req.body;
+  const { username, password } = req.body;
 
-  // Benutzer suchen
-  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, row) => {
+  db.get('SELECT * FROM users WHERE username = ?', [username], async (err, row) => {
     if (err) {
       return res.status(500).json({ msg: 'Database error' });
     }
@@ -68,16 +60,14 @@ router.post('/login', [
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // Passwort überprüfen
     const isMatch = await bcrypt.compare(password, row.password);
     if (!isMatch) {
       return res.status(400).json({ msg: 'Invalid credentials' });
     }
 
-    // JWT erstellen
-    const token = jwt.sign({ email, username: row.username }, JWT_SECRET, { expiresIn: '1h' });
+    const token = jwt.sign({ id: row.id, username: row.username }, JWT_SECRET, { expiresIn: '1h' });
 
-    res.json({ token });
+    res.json({ token, user: { id: row.id, username: row.username } });
   });
 });
 

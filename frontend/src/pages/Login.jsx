@@ -1,38 +1,67 @@
 import { useState } from "react";
-import { loginUser } from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { login } from "../services/api";
+import { useNavigate, Link } from "react-router-dom";
 
-export default function Login({ setToken }) {
-  const [email, setEmail] = useState("");
+export default function Login({ onLogin }) {
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleLogin = async () => {
-    setError("");
-
-    if (!email || !password) {
-      setError("All fields are required");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError("Bitte alle Felder ausfüllen");
       return;
     }
 
+    setLoading(true);
+    setError("");
+
     try {
-      const res = await loginUser({ email, password });
-      localStorage.setItem("token", res.data.token);
-      setToken(res.data.token);
-    } catch (error) {
-      setError("Invalid email or password");
+      const res = await login({ username, password });
+      onLogin(res.data.token, res.data.user?.username || username);
+      navigate("/");
+    } catch (err) {
+      setError(err.response?.data?.msg || "Login fehlgeschlagen");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Login</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={handleLogin}>Login</button>
-      <p>Don't have an account? <a href="/register">Register here</a></p>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1>TuDu</h1>
+        <h2>Anmelden</h2>
+
+        {error && <div className="error-msg">{error}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Benutzername"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
+          <input
+            type="password"
+            placeholder="Passwort"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="current-password"
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? "..." : "Anmelden"}
+          </button>
+        </form>
+
+        <p className="auth-link">
+          Noch kein Konto? <Link to="/register">Registrieren</Link>
+        </p>
+      </div>
     </div>
   );
 }

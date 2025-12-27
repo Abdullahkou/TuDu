@@ -1,43 +1,75 @@
 import { useState } from "react";
-import { registerUser } from "../services/api";
-import { useNavigate } from "react-router-dom";
+import { register } from "../services/api";
+import { useNavigate, Link } from "react-router-dom";
 
-export default function Register() {
+export default function Register({ onLogin }) {
   const [username, setUsername] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  const handleRegister = async () => {
-    setError("");
-    setSuccess("");
-
-    if (!username || !email || !password) {
-      setError("All fields are required");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!username || !password) {
+      setError("Bitte alle Felder ausfüllen");
+      return;
+    }
+    if (password.length < 6) {
+      setError("Passwort muss mindestens 6 Zeichen haben");
       return;
     }
 
+    setLoading(true);
+    setError("");
+
     try {
-      await registerUser({ username, email, password });
-      setSuccess("Registration successful! Redirecting to login...");
-      setTimeout(() => navigate("/login"), 2000);
-    } catch (error) {
-      setError(error.response?.data?.error || "Registration failed");
+      const res = await register({ username, password });
+      if (res.data.token) {
+        onLogin(res.data.token, res.data.user?.username || username);
+        navigate("/");
+      } else {
+        navigate("/login");
+      }
+    } catch (err) {
+      setError(err.response?.data?.msg || "Registrierung fehlgeschlagen");
+    } finally {
+      setLoading(false);
     }
   };
 
   return (
-    <div>
-      <h2>Register</h2>
-      {error && <p style={{ color: "red" }}>{error}</p>}
-      {success && <p style={{ color: "green" }}>{success}</p>}
-      <input type="text" placeholder="Username" value={username} onChange={(e) => setUsername(e.target.value)} />
-      <input type="email" placeholder="Email" value={email} onChange={(e) => setEmail(e.target.value)} />
-      <input type="password" placeholder="Password" value={password} onChange={(e) => setPassword(e.target.value)} />
-      <button onClick={handleRegister}>Register</button>
-      <p>Already have an account? <a href="/login">Login here</a></p>
+    <div className="auth-container">
+      <div className="auth-card">
+        <h1>TuDu</h1>
+        <h2>Konto erstellen</h2>
+
+        {error && <div className="error-msg">{error}</div>}
+
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Benutzername"
+            value={username}
+            onChange={(e) => setUsername(e.target.value)}
+            autoComplete="username"
+          />
+          <input
+            type="password"
+            placeholder="Passwort (min. 6 Zeichen)"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            autoComplete="new-password"
+          />
+          <button type="submit" disabled={loading}>
+            {loading ? "..." : "Registrieren"}
+          </button>
+        </form>
+
+        <p className="auth-link">
+          Bereits registriert? <Link to="/login">Anmelden</Link>
+        </p>
+      </div>
     </div>
   );
 }

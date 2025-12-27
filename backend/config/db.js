@@ -5,26 +5,40 @@ db.serialize(() => {
   db.run(`CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT, 
     username TEXT UNIQUE, 
-    email TEXT NOT NULL UNIQUE,  
     password TEXT NOT NULL
   )`);
 
-
-  db.run(`CREATE TABLE IF NOT EXISTS categories (
-    id INTEGER PRIMARY KEY, 
+  db.run(`CREATE TABLE IF NOT EXISTS groups (
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
     user_id INTEGER, 
-    name TEXT NOT NULL
+    name TEXT NOT NULL,
+    color TEXT DEFAULT '#007aff',
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
 
   db.run(`CREATE TABLE IF NOT EXISTS todos (
-    id INTEGER PRIMARY KEY, 
+    id INTEGER PRIMARY KEY AUTOINCREMENT, 
     user_id INTEGER, 
     text TEXT NOT NULL, 
-    priority TEXT CHECK(priority IN ('low', 'medium', 'high')) DEFAULT 'medium', 
-    category_id INTEGER REFERENCES categories(id) ON DELETE SET NULL, 
+    priority TEXT DEFAULT 'Medium', 
+    group_id INTEGER REFERENCES groups(id) ON DELETE SET NULL, 
     due_date TIMESTAMP, 
-    completed BOOLEAN DEFAULT FALSE
+    planned_date TIMESTAMP,
+    description TEXT,
+    completed BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    completed_at TIMESTAMP,
+    FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
   )`);
+
+  db.run(`ALTER TABLE groups ADD COLUMN color TEXT DEFAULT '#007aff'`, (err) => {
+  });
+
+  db.run(`ALTER TABLE todos ADD COLUMN completed_at TIMESTAMP`, (err) => {
+  });
+
+  db.run(`ALTER TABLE todos ADD COLUMN created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP`, (err) => {
+  });
 });
 
 module.exports = db;
